@@ -1,0 +1,16 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [],
+  "author": "saurabh shinde",
+  "license": "ISC",
+  "description": "Github Clone",
+  "dependencies": {
+    "uuid": "^11.0.5",
+    "yargs": "^17.7.2"
+  }
+}

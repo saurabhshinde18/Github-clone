@@ -24,7 +24,6 @@ This project is a **GitHub Clone** built using the **MERN stack** (MongoDB, Expr
 
 ### Additional Tools
 - **UUID**: For generating unique commit IDs.
-- **bcrypt.js**: For password hashing.
 - **JWT (JSON Web Token)**: For user authentication.
 
 ### Prerequisites

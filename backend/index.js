@@ -12,7 +12,9 @@ const { commit } = require("./controllers/commit");
 const { push } = require("./controllers/push");
 const { pull } = require("./controllers/pull");
 const { revert } = require("./controllers/revert");
-
+const { Server } = require("socket.io");
+const http = require("http"); 
+const mainRouter = require('./routes/main.router');
 dotenv.config();
 
 yargs(hideBin(process.argv))
@@ -65,28 +67,56 @@ yargs(hideBin(process.argv))
 function start() {
   const app = express();
   const port = process.env.PORT || 3000;
-
-  app.use(cors());
-  app.use(bodyParser.json());
-  app.use(express.json());
-
-  const mongoURI = process.env.mongoURI;
+  const mongoURI = process.env.MONGO_URI; 
 
   if (!mongoURI) {
     console.error("MongoDB URI is not set in environment variables.");
     process.exit(1);
   }
 
+  app.use(cors({ origin: "*" })); 
+
+
+  app.use("/",mainRouter); 
+  app.use(bodyParser.json());
+  app.use(express.json());
+
   mongoose
     .connect(mongoURI)
     .then(() => {
       console.log("MongoDB connected successfully!");
-      app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-      });
     })
     .catch((err) => {
       console.error("Unable to connect to MongoDB:", err);
       process.exit(1);
     });
+
+
+  const httpServer = http.createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
+  });
+
+  io.on("connection", (socket) => {
+    socket.on("joinRoom", (userID) => {
+      let user = userID; 
+      console.log("============");
+      console.log(user);
+      console.log("============");
+      socket.join(userID);
+    });
+  });
+
+  const db = mongoose.connection;
+  db.once("open", async () => {
+    console.log("CRUD Operations called");
+    // CRUD OPERATIONS
+  });
+
+  httpServer.listen(port, () => {
+    console.log(`Server is running on PORT ${port}`);
+  });
 }

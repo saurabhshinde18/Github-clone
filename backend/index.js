@@ -74,12 +74,10 @@ function start() {
     process.exit(1);
   }
 
-  app.use(cors({ origin: "*" })); 
+  app.use(express.json());  
+app.use(cors({ origin: "*" }));  
+app.use("/", mainRouter); 
 
-
-  app.use("/",mainRouter); 
-  app.use(bodyParser.json());
-  app.use(express.json());
 
   mongoose
     .connect(mongoURI)

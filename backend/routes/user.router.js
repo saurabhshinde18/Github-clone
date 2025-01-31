@@ -3,10 +3,11 @@ const userController = require("../controllers/userController");
 
 const userRouter = express.Router();
 
-userRouter.post("/signUp", userController.signup);
+userRouter.get("/allUsers", userController.getAllUsers);
+userRouter.post("/signup", userController.signup);
 userRouter.post("/login", userController.login);
-userRouter.get("/userProfile", userController.getUserProfile);
-userRouter.put("/updateProfile", userController.updateUserProfile);
-userRouter.delete("/deleteprofile", userController.deleteUserProfile);
+userRouter.get("/userProfile/:id", userController.getUsersProfile);
+userRouter.put("/updateProfile/:id", userController.updateUserProfile);
+userRouter.delete("/deleteProfile/:id", userController.deleteUserProfile);
 
 module.exports = userRouter;

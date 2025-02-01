@@ -1,14 +1,12 @@
 const express = require("express");
-const repoController  = require("../controllers/issueController");
+const issueController = require("../controllers/issueController");
 
 const issueRouter = express.Router();
 
-issueRouter.post("/issue/create", repoController.createIssue);
-issueRouter.put("/issue/update/:id", repoController.updateIssueById);
-issueRouter.delete("/issue/delete/:id", repoController.deleteIssueById);
-issueRouter.get("/issue/all", repoController.getAllIssues);
-issueRouter.get("/issue/:id", repoController.getIssueById);
-
-
+issueRouter.post("/issue/create", issueController.createIssue);
+issueRouter.put("/issue/update/:id", issueController.updateIssueById);
+issueRouter.delete("/issue/delete/:id", issueController.deleteIssueById);
+issueRouter.get("/issue/all", issueController.getAllIssues);
+issueRouter.get("/issue/:id", issueController.getIssueById);
 
 module.exports = issueRouter;

@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import axios from "axios";
-import { useAuth } from "../../AuthContext";
+import { useAuth } from "../../authContext";
 
-import { PageHeader } from "@primer/react";
-
+import { PageHeader } from "@primer/react/drafts";
 import { Box, Button } from "@primer/react";
 import "./auth.css";
 
@@ -11,13 +10,7 @@ import logo from "../../assets/github-mark-white.svg";
 import { Link } from "react-router-dom";
 
 const Login = () => {
-  // useEffect(() => {
-  //   localStorage.removeItem("token");
-  //   localStorage.removeItem("userId");
-  //   setCurrentUser(null);
-  // });
-
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");  // Changed from email to username
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { setCurrentUser } = useAuth();
@@ -25,24 +18,38 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
+    // Basic validation to ensure username and password are provided
+    if (!username || !password) {
+      alert("Please enter both username and password.");
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await axios.post("http://localhost:5000/login", {
-        email: email,
+      const res = await axios.post("http://localhost:3000/login", {
+        username: username,  // Send username instead of email
         password: password,
       });
 
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("userId", res.data.userId);
+      // Check if login was successful
+      if (res.data.token && res.data.userId) {
+        // Store token and userId in localStorage
+        localStorage.setItem("token", res.data.token);
+        localStorage.setItem("userId", res.data.userId);
 
-      setCurrentUser(res.data.userId);
-      setLoading(false);
+        // Set user context
+        setCurrentUser(res.data.userId);
+        setLoading(false);
 
-      window.location.href = "/";
+        window.location.href = "/"; // Redirect to homepage or dashboard
+      } else {
+        setLoading(false);
+        alert("Login failed: Invalid credentials");
+      }
     } catch (err) {
-      console.error(err);
-      alert("Login Failed!");
       setLoading(false);
+      console.error("Login error: ", err);
+      alert("Login failed: " + (err.response?.data?.message || err.message));
     }
   };
 
@@ -64,15 +71,15 @@ const Login = () => {
         </div>
         <div className="login-box">
           <div>
-            <label className="label">Email address</label>
+            <label className="label">Username</label> {/* Changed from Email to Username */}
             <input
               autoComplete="off"
-              name="Email"
-              id="Email"
+              name="Username"
+              id="Username"
               className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"  // Changed from email type to text
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}  // Updated to handle username
             />
           </div>
           <div className="div">

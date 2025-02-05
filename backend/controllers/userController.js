@@ -1,15 +1,15 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
 const uri = process.env.MONGO_URI;
-const { ObjectId } = require("mongodb");
+
 
 let client;
 
 async function connectClient() {
   if (!client) {
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, { useUnifiedTopology: true });
     await client.connect();
   }
 }
@@ -20,12 +20,15 @@ const signup = async (req, res) => {
     await connectClient();
     const db = client.db("GithubClone"); // Updated database name
     const usersCollection = db.collection("users");
+
+    // Check if the user already exists
     const user = await usersCollection.findOne({ username });
 
     if (user) {
       return res.status(400).json({ message: "User already exists!" });
     }
 
+    // Hash the password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -39,58 +42,86 @@ const signup = async (req, res) => {
     };
 
     const result = await usersCollection.insertOne(newUser);
+
+    // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId },
+      { id: result.insertedId }, // Correct MongoDB ObjectId usage
       process.env.JWT_SECRET_KEY,
       { expiresIn: "1h" }
     );
 
-    res.json({ token, userId: result.insertId });
+    res.json({
+      token,
+      userId: result.insertedId.toString(), // Ensure userId is a string
+    });
   } catch (error) {
-    console.error("Error during signup : ", error.message);
+    console.error("Error during signup: ", error.message);
     res.status(500).send("Server error");
   }
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
+
   try {
-    await connectClient();
-    const db = client.db("GithubClone"); // Updated database name
+    // Connect to MongoDB directly
+    const client = new MongoClient(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    
+    await client.connect();
+    const db = client.db("GithubClone");
     const usersCollection = db.collection("users");
-    const user = await usersCollection.findOne({ email });
+
+    // Find user by username
+    const user = await usersCollection.findOne({ username });
 
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials!" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // Compare entered password with hashed password in database
     const isMatch = await bcrypt.compare(password, user.password);
-
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials!" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET_KEY, {
-      expiresIn: "1h",
+    // Generate token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+
+    // Send response with token and userId
+    res.json({
+      token,
+      userId: user._id.toString(),
     });
 
-    res.json({ token, userId: user._id });
+    // Close the connection after the operation
+    client.close();
   } catch (error) {
-    console.error("Error during login : ", error.message);
-    res.status(500).send("Server error!");
+    console.error("Error during login: ", error); // Log detailed error information for debugging
+    res.status(500).send("Server error");
   }
 };
+
+module.exports = { login };
+
+
 
 const getAllUsers = async (req, res) => {
   try {
     await connectClient();
-    const db = client.db("GithubClone"); // Updated database name
+    const db = client.db("GithubClone");
     const usersCollection = db.collection("users");
 
     const users = await usersCollection.find({}).toArray();
     res.json(users);
   } catch (err) {
-    console.error("Error during fetching : ", err.message);
+    console.error("Error during fetching users: ", err.message);
     res.status(500).send("Server error!");
   }
 };
@@ -99,19 +130,17 @@ const getUsersProfile = async (req, res) => {
   const currentID = req.params.id;
   try {
     await connectClient();
-    const db = client.db("GithubClone"); // Updated database name
+    const db = client.db("GithubClone");
     const usersCollection = db.collection("users");
 
-    const user = await usersCollection.findOne({
-      _id: new ObjectId(currentID),
-    });
+    const user = await usersCollection.findOne({ _id: new ObjectId(currentID) });
 
     if (!user) {
       return res.status(404).json({ message: "User not found!" });
     }
     res.send(user);
   } catch (err) {
-    console.error("Error during fetching : ", err.message);
+    console.error("Error during fetching profile: ", err.message);
     res.status(500).send("Server error!");
   }
 };
@@ -122,10 +151,11 @@ const updateUserProfile = async (req, res) => {
 
   try {
     await connectClient();
-    const db = client.db("GithubClone"); // Updated database name
+    const db = client.db("GithubClone");
     const usersCollection = db.collection("users");
 
     let updateFields = { email };
+
     if (password) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
@@ -142,11 +172,9 @@ const updateUserProfile = async (req, res) => {
     }
 
     const updatedUser = await usersCollection.findOne({ _id: new ObjectId(currentID) });
-
-    res.json(updatedUser); 
-
+    res.json(updatedUser);
   } catch (err) {
-    console.error("Error during updating : ", err.message);
+    console.error("Error during updating profile: ", err.message);
     res.status(500).send("Server error!");
   }
 };
@@ -156,20 +184,20 @@ const deleteUserProfile = async (req, res) => {
 
   try {
     await connectClient();
-    const db = client.db("GithubClone"); // Updated database name
+    const db = client.db("GithubClone");
     const usersCollection = db.collection("users");
 
     const result = await usersCollection.deleteOne({
       _id: new ObjectId(currentID),
     });
 
-    if (result.deleteCount == 0) {
+    if (result.deleteCount === 0) {
       return res.status(404).json({ message: "User not found!" });
     }
 
     res.json({ message: "User Profile Deleted!" });
   } catch (err) {
-    console.error("Error during updating : ", err.message);
+    console.error("Error during deleting profile: ", err.message);
     res.status(500).send("Server error!");
   }
 };
@@ -177,7 +205,7 @@ const deleteUserProfile = async (req, res) => {
 module.exports = {
   getAllUsers,
   signup,
-  login,
+  login, // Make sure login function is included in exports
   getUsersProfile,
   updateUserProfile,
   deleteUserProfile,

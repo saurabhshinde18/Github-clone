@@ -3,6 +3,13 @@ const Repository = require("../models/repoModel");
 const User = require("../models/userModel");
 const Issue = require("../models/issueModel");
 
+const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const Repository = require('../models/Repository');  // Assuming you have a Repository model
+
+const mongoose = require("mongoose");
+const Repository = require("../models/Repository"); // Assuming you have this model
+
 const createRepo = async (req, res) => {
   const { owner, name, issues, content, description, visibility } = req.body;
 
@@ -15,13 +22,17 @@ const createRepo = async (req, res) => {
       return res.status(400).json({ error: "Invalid User ID!" });
     }
 
+    // Convert string issues into ObjectIds (only if they are valid)
+    const validIssues = issues.map(issue => mongoose.Types.ObjectId.isValid(issue) ? mongoose.Types.ObjectId(issue) : null).filter(issue => issue !== null);
+
+    // If no valid issues after conversion, leave it as an empty array
     const newRepository = new Repository({
       name,
       description,
-      visibility,
+      visibility: visibility === "public", // Ensure visibility is a boolean (true for public)
       owner,
       content,
-      issues,
+      issues: validIssues, // Use valid ObjectIds for issues
     });
 
     const result = await newRepository.save();
@@ -35,6 +46,8 @@ const createRepo = async (req, res) => {
     res.status(500).send("Server error");
   }
 };
+
+
 
 const getAllRepo = async (req, res) => {
   try {

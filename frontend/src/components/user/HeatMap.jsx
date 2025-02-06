@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import HeatMap from "@uiw/react-heat-map";
 
-// Function to generate random activity
+
 const generateActivityData = (startDate, endDate) => {
   const data = [];
   let currentDate = new Date(startDate);
